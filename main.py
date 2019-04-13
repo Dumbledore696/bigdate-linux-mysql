@@ -1,7 +1,7 @@
 # encoding: utf-8
 from __future__ import division
 import sys
-print sys.path
+# print sys.path
 sys.path.append('/home/njit/PycharmProjects/Host/venv/lib/python2.7/site-packages')
 # sys.path.append('/home/Host/venv/lib/python2.7/site-packages')
 
@@ -81,19 +81,31 @@ except Exception, e1:
     else:
         print "used old table"
 
+try:
+    cur.execute("CREATE TABLE `Log` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`级别`  int NULL ,`内容`  varchar(50) NULL ,`日期`  varchar(50) NULL , `备注`  varchar(50) NULL )")
+except Exception, e1:
+    choise1 = raw_input("table Log exists,drop? (Y/N)")
+    if choise1.lower() == "y":
+        cur.execute("drop table Log")
+        cur.execute("CREATE TABLE `Log` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`级别`  int NULL ,`内容`  varchar(50) NULL ,`日期`  varchar(50) NULL , `备注`  varchar(50) NULL )")
+        print "drop old table and creating new table(Log)... "
+        time.sleep(1)
+        print "creat new table success!!"
+    else:
+        print "used old table"
+
 
 # 数据库mysql插入、修改命令
 sql_inserver="insert into server_info values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
 
-
+sql_inlog="insert into Log values(%s,%s,%s,%s,%s)"
 sql_incpu = "insert into cpu_dynamic_info values(%s,%s,%s,%s)"
 sql_inmem = "insert into mem_dynamic_info values(%s,%s,%s,%s)"
 sql_indisk = "insert into disk_dynamic_info values(%s,%s,%s,%s)"
 
-sql_alter="ALTER TABLE `server_info`ADD UNIQUE INDEX `hostname` (`节点名称`) "
-
 
 # 修改server_info表，以主机名为索引，防止重复
+sql_alter="ALTER TABLE `server_info`ADD UNIQUE INDEX `hostname` (`节点名称`) "
 try:
     cur.execute(sql_alter)
 except:
@@ -164,7 +176,7 @@ while True:
     # 判断记录是否存在，不存在则插入，存在则更新
     if host_name in hostname_set:
         time_update = time.asctime()
-        print time_update
+        # print time_update
         sql_update = "UPDATE  server_info " \
                      "SET  内存='"+str(memory_total)+"G', `磁盘空间`='"+disk_total+"G', `修改时间`=\'"+time_update+"\'  WHERE `节点名称` = \'"+host_name+"\'"
         cur.execute(sql_update)
@@ -174,20 +186,27 @@ while True:
 
     #动态表的host_id 和服务器表的ID绑定
     sql_table2 = "select * from server_info where `节点名称`=\'"+host_name+"\'"
+    # sql_table2 = "select * from server_info where `节点名称`='ubantu'"
+    flag=0
     try:
         cur.execute(sql_selectdb)
         cur.execute(sql_table2)
         results = cur.fetchone()
         host_id=results[0]
+        flag=1
     except:
-        print("Error")
+        print("Error: not find hostname in server_info")
+        print("Please insert imformation about this server!")
 
 
 
-    # 执行mysql命令
-    cur.execute(sql_indisk, (0,host_id,disk_used_info+ '%', now))
-    cur.execute(sql_inmem, (0,host_id, memory_used, now))
-    cur.execute(sql_incpu, (0,host_id, cpu_used_tmp, now))
+    # 执行mysql命令,插入各表,,server_info中若存在此服务器则统计此服务器的信息，否则将服务器不存在的结果上报到日志表
+    if flag==1:
+        cur.execute(sql_indisk, (0,host_id,disk_used_info+ '%', now))
+        cur.execute(sql_inmem, (0,host_id, memory_used, now))
+        cur.execute(sql_incpu, (0,host_id, cpu_used_tmp, now))
+    else:
+        cur.execute(sql_inlog, (0, 1, 'Not find server:'+host_name,now,'NULL'))
 
 
     # cur.execute(sql_in, ("Average_load(1s)", load1s, now))
