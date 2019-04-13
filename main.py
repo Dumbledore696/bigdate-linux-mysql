@@ -1,11 +1,17 @@
 # encoding: utf-8
 from __future__ import division
+import sys
+print sys.path
+sys.path.append('/home/njit/PycharmProjects/Host/venv/lib/python2.7/site-packages')
+# sys.path.append('/home/Host/venv/lib/python2.7/site-packages')
+
 import  os
 import pymysql
 import time, conf
 import socket
 import getpass
 import disk_used, mem_used, cpu_used, Average_load, host_ip,get_cpuinfo
+
 
 # 连接数据库，定义游标
 conn = pymysql.connect(user=conf.user, passwd=conf.passwd, host=conf.host, port=conf.port)
@@ -63,12 +69,12 @@ except Exception, e1:
     else:
         print "used old table"
 try:
-    cur.execute("CREATE TABLE `server_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`节点名称`  varchar(255) NULL ,`IP地址`  varchar(255) NULL ,`服务器类型`  varchar(255) NULL ,`cpu型号`  varchar(255) NULL ,`cpu核数`  varchar(255) NULL ,`内存`  varchar(255) NULL ,`磁盘空间`  varchar(255) NULL ,`录入时间`  varchar(255) NULL ,`修改时间`  varchar(255) NULL ,`是否安装agent`  varchar(255) NULL ,`备注`  varchar(255) NULL  )")
+    cur.execute("CREATE TABLE `server_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`节点名称`  varchar(255) NULL ,`IP地址`  varchar(255) NULL ,`服务器类型`  varchar(255) NULL ,`cpu型号`  varchar(255) NULL ,`cpu核数`  varchar(255) NULL ,`内存`  varchar(255) NULL ,`磁盘空间`  varchar(255) NULL ,`录入时间`  varchar(255) NULL ,`修改时间`  varchar(255) NULL ,`是否安装agent`  enum('1','0') CHARACTER SET utf8 NULL DEFAULT '0' COMMENT '0为未安装' ,`备注`  varchar(255) NULL  )")
 except Exception, e1:
     choise1 = raw_input("table server_info exists,drop? (Y/N)")
     if choise1.lower() == "y":
         cur.execute("drop table server_info")
-        cur.execute( "CREATE TABLE `server_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`节点名称`  varchar(255) NULL ,`IP地址`  varchar(255) NULL ,`服务器类型`  varchar(255) NULL ,`cpu型号`  varchar(255) NULL ,`cpu核数`  varchar(255) NULL ,`内存`  varchar(255) NULL ,`磁盘空间`  varchar(255) NULL ,`录入时间`  varchar(255) NULL ,`修改时间`  varchar(255) NULL ,`是否安装agent`  varchar(255) NULL ,`备注`  varchar(255) NULL  )")
+        cur.execute( "CREATE TABLE `server_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`节点名称`  varchar(255) NULL ,`IP地址`  varchar(255) NULL ,`服务器类型`  varchar(255) NULL ,`cpu型号`  varchar(255) NULL ,`cpu核数`  varchar(255) NULL ,`内存`  varchar(255) NULL ,`磁盘空间`  varchar(255) NULL ,`录入时间`  varchar(255) NULL ,`修改时间`  varchar(255) NULL ,`是否安装agent`  enum('1','0') CHARACTER SET utf8 NULL DEFAULT '0' COMMENT '0为未安装'  ,`备注`  varchar(255) NULL  )")
         print "drop old table and creating new table(server_info)... "
         time.sleep(1)
         print "creat new table success!!"
@@ -88,13 +94,27 @@ sql_alter="ALTER TABLE `server_info`ADD UNIQUE INDEX `hostname` (`节点名称`)
 
 
 # 修改server_info表，以主机名为索引，防止重复
-cur.execute(sql_alter)
+try:
+    cur.execute(sql_alter)
+except:
+    print("已经修改")
 
 
 
 start_time = time.time()
 
 hostname_set=set([0])
+sql_selectdb="use disk_used_db"
+sql_table="select * from server_info"
+try:
+    cur.execute(sql_selectdb)
+    cur.execute(sql_table)
+    results=cur.fetchall()
+    for row in results:
+        hostname_set.add(row[1])
+except:
+    print("Error")
+# print(hostname_set)
 
 # 循环插入表，30s为一轮
 while True:
@@ -135,7 +155,7 @@ while True:
     # 录入时间
     now = time.asctime()
 
-    b=1
+
 
     #ip信息，，ip地址和主机名
     host_ipadd=host_ip.get_netcard()
@@ -146,18 +166,28 @@ while True:
         time_update = time.asctime()
         print time_update
         sql_update = "UPDATE  server_info " \
-                     "SET  内存='"+str(memory_total)+"G', `磁盘空间`='"+disk_total+"G', `修改时间`=\'"+time_update+"\' "
+                     "SET  内存='"+str(memory_total)+"G', `磁盘空间`='"+disk_total+"G', `修改时间`=\'"+time_update+"\'  WHERE `节点名称` = \'"+host_name+"\'"
         cur.execute(sql_update)
     else:
         cur.execute(sql_inserver, (0, host_name, host_ipadd, "DataNode", cpu_model, cpu_num, str(memory_total) + "G", disk_total + "G", now, now, 1,"NULL"))
         hostname_set.add(host_name)
 
+    #动态表的host_id 和服务器表的ID绑定
+    sql_table2 = "select * from server_info where `节点名称`=\'"+host_name+"\'"
+    try:
+        cur.execute(sql_selectdb)
+        cur.execute(sql_table2)
+        results = cur.fetchone()
+        host_id=results[0]
+    except:
+        print("Error")
+
 
 
     # 执行mysql命令
-    cur.execute(sql_indisk, (0,b,disk_used_info+ '%', now))
-    cur.execute(sql_inmem, (0,b, memory_used, now))
-    cur.execute(sql_incpu, (0,b, cpu_used_tmp, now))
+    cur.execute(sql_indisk, (0,host_id,disk_used_info+ '%', now))
+    cur.execute(sql_inmem, (0,host_id, memory_used, now))
+    cur.execute(sql_incpu, (0,host_id, cpu_used_tmp, now))
 
 
     # cur.execute(sql_in, ("Average_load(1s)", load1s, now))
