@@ -2,8 +2,8 @@
 from __future__ import division
 import sys
 # print sys.path
-sys.path.append('/home/njit/PycharmProjects/Host/venv/lib/python2.7/site-packages')
-# sys.path.append('/home/Host/venv/lib/python2.7/site-packages')
+#sys.path.append('/home/njit/PycharmProjects/Host/venv/lib/python2.7/site-packages')
+sys.path.append('/./home/Host/venv/lib/python2.7/site-packages')
 
 import  os
 import pymysql
@@ -82,12 +82,12 @@ except Exception, e1:
         print "used old table"
 
 try:
-    cur.execute("CREATE TABLE `Log` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`级别`  int NULL ,`内容`  varchar(50) NULL ,`日期`  varchar(50) NULL , `备注`  varchar(50) NULL )")
+    cur.execute("CREATE TABLE `Log` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`hostID` int NULL , `级别`  int NULL ,`内容`  varchar(50) NULL ,`日期`  varchar(50) NULL , `备注`  varchar(50) NULL )")
 except Exception, e1:
     choise1 = raw_input("table Log exists,drop? (Y/N)")
     if choise1.lower() == "y":
         cur.execute("drop table Log")
-        cur.execute("CREATE TABLE `Log` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`级别`  int NULL ,`内容`  varchar(50) NULL ,`日期`  varchar(50) NULL , `备注`  varchar(50) NULL )")
+        cur.execute("CREATE TABLE `Log` (`ID`  int PRIMARY KEY AUTO_INCREMENT , `hostID` int NULL , `级别`  int NULL ,`内容`  varchar(50) NULL ,`日期`  varchar(50) NULL , `备注`  varchar(50) NULL )")
         print "drop old table and creating new table(Log)... "
         time.sleep(1)
         print "creat new table success!!"
@@ -98,10 +98,11 @@ except Exception, e1:
 # 数据库mysql插入、修改命令
 sql_inserver="insert into server_info values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
 
-sql_inlog="insert into Log values(%s,%s,%s,%s,%s)"
+sql_inlog="insert into Log values(%s,%s,%s,%s,%s,%s)"
 sql_incpu = "insert into cpu_dynamic_info values(%s,%s,%s,%s)"
 sql_inmem = "insert into mem_dynamic_info values(%s,%s,%s,%s)"
 sql_indisk = "insert into disk_dynamic_info values(%s,%s,%s,%s)"
+
 
 
 # 修改server_info表，以主机名为索引，防止重复
@@ -109,7 +110,7 @@ sql_alter="ALTER TABLE `server_info`ADD UNIQUE INDEX `hostname` (`节点名称`)
 try:
     cur.execute(sql_alter)
 except:
-    print("已经修改")
+    print("已经修改主机名唯一")
 
 
 
@@ -140,6 +141,7 @@ while True:
     memtotaltemp=float(memtotal)/1024/1024
     memavailabletemp=float(memavailable)/1024/1024
     memusedtemp=memtotaltemp-memavailabletemp
+    memusedtemp2=(memusedtemp/memtotaltemp) * 100
     memory_used="%.2f%%" % ((memusedtemp/memtotaltemp) * 100)
     memory_total="%.2f" % (memtotaltemp)
 
@@ -205,8 +207,14 @@ while True:
         cur.execute(sql_indisk, (0,host_id,disk_used_info+ '%', now))
         cur.execute(sql_inmem, (0,host_id, memory_used, now))
         cur.execute(sql_incpu, (0,host_id, cpu_used_tmp, now))
+        if memusedtemp2>=80:
+            cur.execute(sql_inlog, (0,host_id,2,"memory is used beyond 80%",now,"NULL"))
+        if int(disk_used_info)>=80:
+            cur.execute(sql_inlog, (0,host_id,2,"disk is used beyond 80%",now,"NULL"))
+        if float(cpuinfo_tmp[0])>=80:
+            cur.execute(sql_inlog, (0, host_id, 2, "cpu is used beyond 80%", now, "NULL"))
     else:
-        cur.execute(sql_inlog, (0, 1, 'Not find server:'+host_name,now,'NULL'))
+        cur.execute(sql_inlog, (0, "NULL",1,'Not find server:'+host_name,now,'NULL'))
 
 
     # cur.execute(sql_in, ("Average_load(1s)", load1s, now))
