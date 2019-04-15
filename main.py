@@ -1,16 +1,14 @@
 # encoding: utf-8
 from __future__ import division
 import sys
-# print sys.path
-#sys.path.append('/home/njit/PycharmProjects/Host/venv/lib/python2.7/site-packages')
-sys.path.append('/./home/Host/venv/lib/python2.7/site-packages')
+sys.path.append('/./home/njit/PycharmProjects/Host/venv/lib/python2.7/site-packages')
+# sys.path.append('/./home/Host/venv/lib/python2.7/site-packages')
 
 import  os
 import pymysql
 import time, conf
 import socket
-import getpass
-import disk_used, mem_used, cpu_used, Average_load, host_ip,get_cpuinfo
+import disk_used, mem_used, cpu_used, Average_load, host_ip,get_cpuinfo , judge_exist
 
 
 # 连接数据库，定义游标
@@ -18,92 +16,59 @@ conn = pymysql.connect(user=conf.user, passwd=conf.passwd, host=conf.host, port=
 cur = conn.cursor()
 
 
-# 创建数据库，，创建表
+# 创建数据库和表
 try:
-    cur.execute("create database disk_used_db")
+    if judge_exist.database_exist(cur,'collection')!=1 :
+        cur.execute("create database collection")
+    else:
+        print ("use old database")
 except Exception, e:
-    choise = raw_input("database disk_used_db exists,drop? (Y/N)")
-    if choise.lower() == "y":
-        cur.execute("drop database disk_used_db")
-        cur.execute("create database disk_used_db")
-        print "drop old database and creating new database(disk_used_db)... "
-        time.sleep(1)
-        print "creat new database success!!"
-    else:
-        print "used old database"
-conn.select_db("disk_used_db")
+    print ("Error:creat database ")
+conn.select_db("collection")
 try:
-    cur.execute("CREATE TABLE `cpu_dynamic_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`hostID`  int NULL ,`usage`  varchar(50) NULL ,`mytime`  varchar(50) NULL )")
-except Exception, e1:
-    choise1 = raw_input("table cpu_dynamic_info exists,drop? (Y/N)")
-    if choise1.lower() == "y":
-        cur.execute("drop table cpu_dynamic_info")
+    if judge_exist.table_exist(cur,'cpu_dynamic_info')!=1:
         cur.execute("CREATE TABLE `cpu_dynamic_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`hostID`  int NULL ,`usage`  varchar(50) NULL ,`mytime`  varchar(50) NULL )")
-        print "drop old table and creating new table(cpu_dynamic_info)... "
-        time.sleep(1)
-        print "creat new table success!!"
     else:
-        print "used old table"
-try:
-    cur.execute("CREATE TABLE `mem_dynamic_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`hostID`  int NULL ,`usage`  varchar(50) NULL ,`mytime`  varchar(50) NULL )")
+        print ("use old table")
 except Exception, e1:
-    choise1 = raw_input("table mem_dynamic_info exists,drop? (Y/N)")
-    if choise1.lower() == "y":
-        cur.execute("drop table mem_dynamic_info")
+    print ("Error:creat table cpu_dynamic_info ")
+try:
+    if judge_exist.table_exist(cur,'mem_dynamic_info')!=1:
         cur.execute("CREATE TABLE `mem_dynamic_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`hostID`  int NULL ,`usage`  varchar(50) NULL ,`mytime`  varchar(50) NULL )")
-        print "drop old table and creating new table(mem_dynamic_info)... "
-        time.sleep(1)
-        print "creat new table success!!"
     else:
-        print "used old table"
+        print ("use old table")
+except Exception, e2:
+    print ("Error:creat table mem_dynamic_info ")
 try:
-    cur.execute("CREATE TABLE `disk_dynamic_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`hostID`  int NULL ,`usage`  varchar(50) NULL ,`mytime`  varchar(50) NULL )")
-except Exception, e1:
-    choise1 = raw_input("table disk_dynamic_info exists,drop? (Y/N)")
-    if choise1.lower() == "y":
-        cur.execute("drop table disk_dynamic_info")
-        cur.execute( "CREATE TABLE `disk_dynamic_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`hostID`  int NULL ,`usage`  varchar(50) NULL ,`mytime`  varchar(50) NULL )")
-        print "drop old table and creating new table(disk_dynamic_info)... "
-        time.sleep(1)
-        print "creat new table success!!"
+    if judge_exist.table_exist(cur,'disk_dynamic_info')!=1:
+        cur.execute("CREATE TABLE `disk_dynamic_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`hostID`  int NULL ,`usage`  varchar(50) NULL ,`mytime`  varchar(50) NULL )")
     else:
-        print "used old table"
+        print ("use old table")
+except Exception, e3:
+    print ("Error:creat table disk_dynamic_info ")
 try:
-    cur.execute("CREATE TABLE `server_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`节点名称`  varchar(255) NULL ,`IP地址`  varchar(255) NULL ,`服务器类型`  varchar(255) NULL ,`cpu型号`  varchar(255) NULL ,`cpu核数`  varchar(255) NULL ,`内存`  varchar(255) NULL ,`磁盘空间`  varchar(255) NULL ,`录入时间`  varchar(255) NULL ,`修改时间`  varchar(255) NULL ,`是否安装agent`  enum('1','0') CHARACTER SET utf8 NULL DEFAULT '0' COMMENT '0为未安装' ,`备注`  varchar(255) NULL  )")
-except Exception, e1:
-    choise1 = raw_input("table server_info exists,drop? (Y/N)")
-    if choise1.lower() == "y":
-        cur.execute("drop table server_info")
-        cur.execute( "CREATE TABLE `server_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`节点名称`  varchar(255) NULL ,`IP地址`  varchar(255) NULL ,`服务器类型`  varchar(255) NULL ,`cpu型号`  varchar(255) NULL ,`cpu核数`  varchar(255) NULL ,`内存`  varchar(255) NULL ,`磁盘空间`  varchar(255) NULL ,`录入时间`  varchar(255) NULL ,`修改时间`  varchar(255) NULL ,`是否安装agent`  enum('1','0') CHARACTER SET utf8 NULL DEFAULT '0' COMMENT '0为未安装'  ,`备注`  varchar(255) NULL  )")
-        print "drop old table and creating new table(server_info)... "
-        time.sleep(1)
-        print "creat new table success!!"
+    if judge_exist.table_exist(cur,'server_info')!=1:
+        cur.execute("CREATE TABLE `server_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`节点名称`  varchar(255) NULL ,`IP地址`  varchar(255) NULL ,`服务器类型`  varchar(255) NULL ,`cpu型号`  varchar(255) NULL ,`cpu核数`  varchar(255) NULL ,`内存`  varchar(255) NULL ,`磁盘空间`  varchar(255) NULL ,`录入时间`  varchar(255) NULL ,`修改时间`  varchar(255) NULL ,`是否安装agent`  enum('1','0') CHARACTER SET utf8 NULL DEFAULT '0' COMMENT '0为未安装' ,`备注`  varchar(255) NULL  )")
     else:
-        print "used old table"
+        print ("use old table")
+except Exception, e4:
+    print ("Error:creat table server_info ")
 
 try:
-    cur.execute("CREATE TABLE `Log` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`hostID` int NULL , `级别`  int NULL ,`内容`  varchar(50) NULL ,`日期`  varchar(50) NULL , `备注`  varchar(50) NULL )")
-except Exception, e1:
-    choise1 = raw_input("table Log exists,drop? (Y/N)")
-    if choise1.lower() == "y":
-        cur.execute("drop table Log")
-        cur.execute("CREATE TABLE `Log` (`ID`  int PRIMARY KEY AUTO_INCREMENT , `hostID` int NULL , `级别`  int NULL ,`内容`  varchar(50) NULL ,`日期`  varchar(50) NULL , `备注`  varchar(50) NULL )")
-        print "drop old table and creating new table(Log)... "
-        time.sleep(1)
-        print "creat new table success!!"
+    if judge_exist.table_exist(cur,'Log')!=1:
+        cur.execute("CREATE TABLE `Log` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`hostID` int NULL , `级别`  int NULL ,`内容`  varchar(50) NULL ,`日期`  varchar(50) NULL , `备注`  varchar(50) NULL )")
     else:
-        print "used old table"
+        print("use old table")
+except Exception, e5:
+    print("Error:creat Log")
 
 
 # 数据库mysql插入、修改命令
 sql_inserver="insert into server_info values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-
 sql_inlog="insert into Log values(%s,%s,%s,%s,%s,%s)"
 sql_incpu = "insert into cpu_dynamic_info values(%s,%s,%s,%s)"
 sql_inmem = "insert into mem_dynamic_info values(%s,%s,%s,%s)"
 sql_indisk = "insert into disk_dynamic_info values(%s,%s,%s,%s)"
-
-
 
 # 修改server_info表，以主机名为索引，防止重复
 sql_alter="ALTER TABLE `server_info`ADD UNIQUE INDEX `hostname` (`节点名称`) "
@@ -117,7 +82,7 @@ except:
 start_time = time.time()
 
 hostname_set=set([0])
-sql_selectdb="use disk_used_db"
+sql_selectdb="use collection"
 sql_table="select * from server_info"
 try:
     cur.execute(sql_selectdb)
@@ -127,13 +92,12 @@ try:
         hostname_set.add(row[1])
 except:
     print("Error")
-# print(hostname_set)
 
-# 循环插入表，30s为一轮
+# 循环插入表，1分钟保存一次
 while True:
     # 磁盘信息
-    disk_used_info = disk_used.get_disk_used().strip()  # type: unicode
-    disk_total = os.popen("df -h | sed '1d' | awk '{sum += $2};END {print sum}'").read()
+    disk_used_info = disk_used.get_disk_used()[1]  # type: unicode
+    disk_total = disk_used.get_disk_used()[0]
     # 内存信息
     memuseinfos=mem_used.get_mem_used().split('\n')
     memtotal=memuseinfos[0]
@@ -180,10 +144,10 @@ while True:
         time_update = time.asctime()
         # print time_update
         sql_update = "UPDATE  server_info " \
-                     "SET  内存='"+str(memory_total)+"G', `磁盘空间`='"+disk_total+"G', `修改时间`=\'"+time_update+"\'  WHERE `节点名称` = \'"+host_name+"\'"
+                     "SET  内存='"+str(memory_total)+"G', `磁盘空间`='"+str(disk_total)+"G', `修改时间`=\'"+time_update+"\'  WHERE `节点名称` = \'"+host_name+"\'"
         cur.execute(sql_update)
     else:
-        cur.execute(sql_inserver, (0, host_name, host_ipadd, "DataNode", cpu_model, cpu_num, str(memory_total) + "G", disk_total + "G", now, now, 1,"NULL"))
+        cur.execute(sql_inserver, (0, host_name, host_ipadd, "DataNode", cpu_model, cpu_num, str(memory_total) + "G", str(disk_total) + "G", now, now, 1,"NULL"))
         hostname_set.add(host_name)
 
     #动态表的host_id 和服务器表的ID绑定
@@ -202,17 +166,23 @@ while True:
 
 
 
-    # 执行mysql命令,插入各表,,server_info中若存在此服务器则统计此服务器的信息，否则将服务器不存在的结果上报到日志表
+    # 执行mysql命令,插入各表,,server_info中若存在此服务器则统计此服务器的信息，否则将服务器不存在,或者主机名错误的结果上报到日志表
     if flag==1:
-        cur.execute(sql_indisk, (0,host_id,disk_used_info+ '%', now))
+        cur.execute(sql_indisk, (0,host_id,str(disk_used_info)+'%', now))
         cur.execute(sql_inmem, (0,host_id, memory_used, now))
         cur.execute(sql_incpu, (0,host_id, cpu_used_tmp, now))
+        if memusedtemp2>=50:
+            cur.execute(sql_inlog, (0,host_id,2,"memory is used beyond 50%",now,"Warning"))
+        if float(disk_used_info)>=50.0:
+            cur.execute(sql_inlog, (0,host_id,2,"disk is used beyond 50%",now,"Warning"))
+        if float(cpuinfo_tmp[0])>=50:
+            cur.execute(sql_inlog, (0, host_id, 2, "cpu is used beyond 50%", now, "Warning"))
         if memusedtemp2>=80:
-            cur.execute(sql_inlog, (0,host_id,2,"memory is used beyond 80%",now,"NULL"))
-        if int(disk_used_info)>=80:
-            cur.execute(sql_inlog, (0,host_id,2,"disk is used beyond 80%",now,"NULL"))
+            cur.execute(sql_inlog, (0,host_id,3,"memory is used beyond 80%",now,"Error"))
+        if float(disk_used_info) >=80.0:
+            cur.execute(sql_inlog, (0,host_id,3,"disk is used beyond 80%",now,"Error"))
         if float(cpuinfo_tmp[0])>=80:
-            cur.execute(sql_inlog, (0, host_id, 2, "cpu is used beyond 80%", now, "NULL"))
+            cur.execute(sql_inlog, (0, host_id, 3, "cpu is used beyond 80%", now, "Error"))
     else:
         cur.execute(sql_inlog, (0, "NULL",1,'Not find server:'+host_name,now,'NULL'))
 
@@ -224,15 +194,15 @@ while True:
     conn.commit()
 
     print "saving....."
-    time.sleep(5)           ##fresh per 5 second
-    end_time = time.time()
-    if end_time - start_time >= 30:
-        selc = raw_input("Data stored for 30 seconds has been stored,continue?(Y/N)")
-        if selc.lower() == "y":
-            start_time = time.time()
-            continue
-        else:
-            break
+    time.sleep(60)           ##fresh per 60 second
+    # end_time = time.time()
+    # if end_time - start_time >= 30:
+    #     selc = raw_input("Data stored for 30 seconds has been stored,continue?(Y/N)")
+    #     if selc.lower() == "y":
+    #         start_time = time.time()
+    #         continue
+    #     else:
+    #         break
 
 
 # 关闭游标和数据库
