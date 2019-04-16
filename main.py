@@ -8,7 +8,7 @@ import  os
 import pymysql
 import time, conf
 import socket
-import disk_used, mem_used, cpu_used, Average_load, host_ip,get_cpuinfo , judge_exist
+import disk_used, mem_used, cpu_used, Average_load, host_ip,get_cpuinfo , judge_exist , network_speed
 
 
 # 连接数据库，定义游标
@@ -47,6 +47,13 @@ try:
 except Exception, e3:
     print ("Error:creat table disk_dynamic_info ")
 try:
+    if judge_exist.table_exist(cur,'network_dynamic_info')!=1:
+        cur.execute("CREATE TABLE `network_dynamic_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`hostID`  int NULL ,`receive_speed`  varchar(50) NULL , `transmit_speed`  varchar(50) NULL,`mytime`  varchar(50) NULL )")
+    else:
+        print ("use old table")
+except Exception, e3:
+    print ("Error:creat table disk_dynamic_info ")
+try:
     if judge_exist.table_exist(cur,'server_info')!=1:
         cur.execute("CREATE TABLE `server_info` (`ID`  int PRIMARY KEY AUTO_INCREMENT ,`节点名称`  varchar(255) NULL ,`IP地址`  varchar(255) NULL ,`服务器类型`  varchar(255) NULL ,`cpu型号`  varchar(255) NULL ,`cpu核数`  varchar(255) NULL ,`内存`  varchar(255) NULL ,`磁盘空间`  varchar(255) NULL ,`录入时间`  varchar(255) NULL ,`修改时间`  varchar(255) NULL ,`是否安装agent`  enum('1','0') CHARACTER SET utf8 NULL DEFAULT '0' COMMENT '0为未安装' ,`备注`  varchar(255) NULL  )")
     else:
@@ -69,6 +76,7 @@ sql_inlog="insert into Log values(%s,%s,%s,%s,%s,%s)"
 sql_incpu = "insert into cpu_dynamic_info values(%s,%s,%s,%s)"
 sql_inmem = "insert into mem_dynamic_info values(%s,%s,%s,%s)"
 sql_indisk = "insert into disk_dynamic_info values(%s,%s,%s,%s)"
+sql_innetwork="insert into network_dynamic_info values(%s,%s,%s,%s,%s)"
 
 # 修改server_info表，以主机名为索引，防止重复
 sql_alter="ALTER TABLE `server_info`ADD UNIQUE INDEX `hostname` (`节点名称`) "
@@ -99,12 +107,11 @@ while True:
     disk_used_info = disk_used.get_disk_used()[1]  # type: unicode
     disk_total = disk_used.get_disk_used()[0]
     # 内存信息
-    memuseinfos=mem_used.get_mem_used().split('\n')
-    memtotal=memuseinfos[0]
-    memavailable = memuseinfos[1]
-    memtotaltemp=float(memtotal)/1024/1024
-    memavailabletemp=float(memavailable)/1024/1024
-    memusedtemp=memtotaltemp-memavailabletemp
+    # memuseinfos=mem_used.get_mem_used().split('\n')
+    memtotal=mem_used.get_mem_used()[0]
+    memused = mem_used.get_mem_used()[1]
+    memtotaltemp=memtotal/1024
+    memusedtemp=memused/1024
     memusedtemp2=(memusedtemp/memtotaltemp) * 100
     memory_used="%.2f%%" % ((memusedtemp/memtotaltemp) * 100)
     memory_total="%.2f" % (memtotaltemp)
@@ -126,9 +133,8 @@ while True:
     cpu_num=cpu_info2[0]
     cpu_model=cpu_info2[1]
 
-
-
-
+    (rec_speed,tran_speed)=network_speed.get_rxandtx()
+    # tran_speed=network_speed.get_rxandtx()[1]
 
     # 录入时间
     now = time.asctime()
@@ -171,6 +177,7 @@ while True:
         cur.execute(sql_indisk, (0,host_id,str(disk_used_info)+'%', now))
         cur.execute(sql_inmem, (0,host_id, memory_used, now))
         cur.execute(sql_incpu, (0,host_id, cpu_used_tmp, now))
+        cur.execute(sql_innetwork,(0,host_id,str(rec_speed)+'kB/s',str(tran_speed)+'kB/s',now))
         if memusedtemp2>=50:
             cur.execute(sql_inlog, (0,host_id,2,"memory is used beyond 50%",now,"Warning"))
         if float(disk_used_info)>=50.0:
