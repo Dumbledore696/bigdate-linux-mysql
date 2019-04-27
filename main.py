@@ -2,7 +2,7 @@
 from __future__ import division
 import sys
 #sys.path.append('/./home/njit/PycharmProjects/Host/venv/lib/python2.7/site-packages')
-sys.path.append('/./home/Host/venv/lib/python2.7/site-packages')
+sys.path.append('/./home/hadoop/桌面/Host/venv/lib/python2.7/site-packages')
 
 import  os
 import pymysql
